@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Token Registration</title>
+  <!-- Supabase JS CDN -->
+  <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 440px;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      border: 1px solid #e2e8f0;
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    p.subtitle {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 22px;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1e293b;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+    button.submit-btn {
+      width: 100%;
+      padding: 13px;
+      background: #0f172a;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+    button.submit-btn:hover {
+      background: #1e293b;
+    }
+    button.submit-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    /* Token Result Card */
+    .token-card {
+      display: none;
+      text-align: center;
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .token-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .token-value {
+      font-size: 38px;
+      font-weight: 800;
+      color: #2563eb;
+      margin: 8px 0;
+    }
+    .token-details {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.6;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+      margin-top: 10px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Token Registration</h2>
+    <p class="subtitle">Apna token number lene ke liye details bharein</p>
+
+    <form id="tokenForm" onsubmit="handleFormSubmit(event)">
+      <div class="form-group">
+        <label for="custName">Customer Name</label>
+        <input type="text" id="custName" placeholder="Jaise: Rajesh Kumar" required>
+      </div>
+
+      <div class="form-group">
+        <label for="custMobile">Mobile Number</label>
+        <input type="tel" id="custMobile" placeholder="10-digit mobile number" pattern="[0-9]{10}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="custAddress">Address with City</label>
+        <textarea id="custAddress" placeholder="Gali/Mohalla, City, Pin Code" required></textarea>
+      </div>
+
+      <button type="submit" id="btnSubmit" class="submit-btn">Token Generate Karein</button>
+    </form>
+
+    <!-- Token display box -->
+    <div id="resultCard" class="token-card">
+      <div class="token-label">Aapka Serial Token No.</div>
+      <div class="token-value" id="displayToken">#0</div>
+      <div class="token-details" id="displayDetails"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. Apne Supabase Credentials yahan dalein ---
+    const SUPABASE_URL = "https://yyzvpjmejzbblunkyadp.supabase.co/rest/v1/";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5enZwam1lanpiYmx1bmt5YWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTU5NjcsImV4cCI6MjEwMDc5MTk2N30.S5XXzQBQQp6bo0jGGe0KBxdGoSdjzGjRFUqjK3y8KCM";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function handleFormSubmit(event) {
+      event.preventDefault();
+
+      const btn = document.getElementById("btnSubmit");
+      const name = document.getElementById("custName").value.trim();
+      const mobile = document.getElementById("custMobile").value.trim();
+      const address = document.getElementById("custAddress").value.trim();
+
+      btn.disabled = true;
+      btn.innerText = "Token create ho raha hai...";
+
+      try {
+        // Supabase table me insert karein
+        // .select() lagane se database me generate hua token_number aur created_at wapas response me mil jata hai
+        const { data, error } = await supabaseClient
+          .from('customer_tokens')
+          .insert([
+            {
+              customer_name: name,
+              mobile: mobile,
+              address_city: address
+            }
+          ])
+          .select('token_number, created_at, customer_name, mobile, address_city')
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        // Response se data nikalna
+        const tokenNumber = data.token_number;
+        const recordDate = new Date(data.created_at);
+        const formattedDate = recordDate.toLocaleDateString('en-IN');
+        const formattedTime = recordDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+        // Token card me show karna
+        document.getElementById("displayToken").innerText = "#" + tokenNumber;
+        document.getElementById("displayDetails").innerHTML = `
+          <strong>Customer:</strong> ${data.customer_name}<br>
+          <strong>Mobile:</strong> ${data.mobile}<br>
+          <strong>Date:</strong> ${formattedDate} | <strong>Time:</strong> ${formattedTime}<br>
+          <strong>Address:</strong> ${data.address_city}
+        `;
+
+        // Form hide/reset aur card show karna
+        document.getElementById("tokenForm").reset();
+        document.getElementById("resultCard").style.display = "block";
+
+      } catch (err) {
+        alert("Error aaya: " + (err.message || "Data save nahi ho paya"));
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Token Generate Karein";
+      }
+    }
+  </script>
+</body>
+</html>
