@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Token Registration</title>
+  <title>Customer Token Portal</title>
+  
+  <!-- Supabase Official JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     * {
@@ -20,7 +23,7 @@
       min-height: 100vh;
       padding: 16px;
     }
-    .container {
+    .card {
       background: #ffffff;
       width: 100%;
       max-width: 440px;
@@ -30,20 +33,20 @@
       border: 1px solid #e2e8f0;
     }
     h2 {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 6px;
       text-align: center;
+      margin-bottom: 6px;
     }
     p.subtitle {
       font-size: 13px;
       color: #64748b;
-      margin-bottom: 22px;
       text-align: center;
+      margin-bottom: 22px;
     }
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     label {
       display: block;
@@ -58,11 +61,13 @@
       border: 1px solid #cbd5e1;
       border-radius: 8px;
       font-size: 14px;
-      color: #1e293b;
+      color: #0f172a;
       outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #f8fafc;
+      transition: all 0.2s ease;
     }
     input:focus, textarea:focus {
+      background: #ffffff;
       border-color: #2563eb;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
     }
@@ -91,45 +96,57 @@
       cursor: not-allowed;
     }
 
-    /* Token Result Card */
-    .token-card {
+    /* Result Card */
+    .token-result {
       display: none;
-      text-align: center;
+      margin-top: 24px;
       background: #f8fafc;
-      border: 2px dashed #cbd5e1;
+      border: 2px dashed #94a3b8;
       border-radius: 12px;
       padding: 20px;
-      margin-top: 20px;
+      text-align: center;
+    }
+    .token-badge {
+      display: inline-block;
+      background: #dcfce7;
+      color: #15803d;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 8px;
     }
     .token-label {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
       color: #64748b;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .token-value {
-      font-size: 38px;
+      font-size: 36px;
       font-weight: 800;
       color: #2563eb;
-      margin: 8px 0;
+      margin: 6px 0;
     }
-    .token-details {
-      font-size: 13px;
-      color: #475569;
-      line-height: 1.6;
-      border-top: 1px solid #e2e8f0;
-      padding-top: 10px;
-      margin-top: 10px;
+    .token-info {
       text-align: left;
+      font-size: 13px;
+      color: #334155;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      margin-top: 12px;
+      line-height: 1.6;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
+  <div class="card">
     <h2>Token Registration</h2>
-    <p class="subtitle">Apna token number lene ke liye details bharein</p>
+    <p class="subtitle">Apna serial token number paane ke liye form bharein</p>
 
     <form id="tokenForm" onsubmit="handleFormSubmit(event)">
       <div class="form-group">
@@ -143,26 +160,36 @@
       </div>
 
       <div class="form-group">
-        <label for="custAddress">Address with City</label>
-        <textarea id="custAddress" placeholder="Gali/Mohalla, City, Pin Code" required></textarea>
+        <label for="custCity">City</label>
+        <input type="text" id="custCity" placeholder="Jaise: Jaipur" required>
+      </div>
+
+      <div class="form-group">
+        <label for="custAddress">Full Address</label>
+        <textarea id="custAddress" placeholder="Colony / Area / Landmark" required></textarea>
       </div>
 
       <button type="submit" id="btnSubmit" class="submit-btn">Token Generate Karein</button>
     </form>
 
-    <!-- Token display box -->
-    <div id="resultCard" class="token-card">
-      <div class="token-label">Aapka Serial Token No.</div>
-      <div class="token-value" id="displayToken">#0</div>
-      <div class="token-details" id="displayDetails"></div>
+    <div id="resultCard" class="token-result">
+      <div class="token-badge">SUCCESS</div>
+      <div class="token-label">SERIAL TOKEN NUMBER</div>
+      <div class="token-value" id="displayToken">---</div>
+      
+      <div class="token-info" id="displayDetails"></div>
+
+      <button type="button" onclick="resetFormView()" class="submit-btn" style="background: #e2e8f0; color: #1e293b; margin-top: 14px;">
+        + Naya Token Banayein
+      </button>
     </div>
   </div>
-  <!-- Supabase JS CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    // --- 1. Apne Supabase Credentials yahan dalein ---
+    // ===== APNI DETAILS YAHAN DALEIN =====
     const SUPABASE_URL = "https://yyzvpjmejzbblunkyadp.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5enZwam1lanpiYmx1bmt5YWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTU5NjcsImV4cCI6MjEwMDc5MTk2N30.S5XXzQBQQp6bo0jGGe0KBxdGoSdjzGjRFUqjK3y8KCM";
+    // ======================================
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -172,56 +199,61 @@
       const btn = document.getElementById("btnSubmit");
       const name = document.getElementById("custName").value.trim();
       const mobile = document.getElementById("custMobile").value.trim();
+      const city = document.getElementById("custCity").value.trim();
       const address = document.getElementById("custAddress").value.trim();
 
       btn.disabled = true;
       btn.innerText = "Token create ho raha hai...";
 
       try {
-        // Supabase table me insert karein
-        // .select() lagane se database me generate hua token_number aur created_at wapas response me mil jata hai
         const { data, error } = await supabaseClient
           .from('tokens')
           .insert([
             {
               customer_name: name,
               mobile: mobile,
-              address_city: address
+              city: city,
+              address: address
             }
           ])
-          .select('token_number, created_at, customer_name, mobile, address_city')
+          .select('token_no, created_at, customer_name, mobile, city, address')
           .single();
 
         if (error) {
           throw error;
         }
 
-        // Response se data nikalna
-        const tokenNumber = data.token_number;
-        const recordDate = new Date(data.created_at);
-        const formattedDate = recordDate.toLocaleDateString('en-IN');
-        const formattedTime = recordDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        // Date and Time format
+        const dateObj = new Date(data.created_at);
+        const dateStr = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeStr = dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-        // Token card me show karna
-        document.getElementById("displayToken").innerText = "#" + tokenNumber;
+        // Display Token Info
+        document.getElementById("displayToken").innerText = data.token_no;
         document.getElementById("displayDetails").innerHTML = `
           <strong>Customer:</strong> ${data.customer_name}<br>
           <strong>Mobile:</strong> ${data.mobile}<br>
-          <strong>Date:</strong> ${formattedDate} | <strong>Time:</strong> ${formattedTime}<br>
-          <strong>Address:</strong> ${data.address_city}
+          <strong>City:</strong> ${data.city}<br>
+          <strong>Address:</strong> ${data.address}<br>
+          <strong>Date:</strong> ${dateStr} | <strong>Time:</strong> ${timeStr}
         `;
 
-        // Form hide/reset aur card show karna
-        document.getElementById("tokenForm").reset();
+        document.getElementById("tokenForm").style.display = "none";
         document.getElementById("resultCard").style.display = "block";
 
       } catch (err) {
-        alert("Error aaya: " + (err.message || "Data save nahi ho paya"));
-        console.error(err);
+        alert("Error: " + (err.message || "Data save nahi hua"));
+        console.error("Full error:", err);
       } finally {
         btn.disabled = false;
         btn.innerText = "Token Generate Karein";
       }
+    }
+
+    function resetFormView() {
+      document.getElementById("tokenForm").reset();
+      document.getElementById("tokenForm").style.display = "block";
+      document.getElementById("resultCard").style.display = "none";
     }
   </script>
 </body>
