@@ -181,7 +181,7 @@
         // Supabase table me insert karein
         // .select() lagane se database me generate hua token_number aur created_at wapas response me mil jata hai
         const { data, error } = await supabaseClient
-          .from('customer_tokens')
+          .from('tokens')
           .insert([
             {
               customer_name: name,
